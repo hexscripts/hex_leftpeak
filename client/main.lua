@@ -50,6 +50,8 @@ local function toggleCamera()
         end
 
         active = true
+
+        startThreads()
         setCameraLook()
     else
         SetCamAffectsAiming(handCamera, true)
@@ -57,21 +59,23 @@ local function toggleCamera()
     end
 end
 
-Citizen.CreateThread(function()
-    while true do
-        Citizen.Wait(0)
+function startThreads()
+    if not active then 
+        return 
+    end
 
-        if active then
+    Citizen.CreateThread(function()
+        while active do
+            Citizen.Wait(0)
+    
             if GetFollowPedCamViewMode() == 4 or not IsPlayerFreeAiming(PlayerId()) then
                 toggleCamera()
             else
                 setCameraLook()
             end
-        else
-            Citizen.Wait(Config.easeTime)
         end
-    end
-end)
+    end)
+end
 
 RegisterKeyMapping(Config.keymapping.name, Config.keymapping.description, 'keyboard', Config.keymapping.key)
 
