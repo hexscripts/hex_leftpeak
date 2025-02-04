@@ -1,15 +1,15 @@
 local camHandle, camActive = 0, false
 
 local function disableCamera()
-    RenderScriptCams(false, true, Config.easeTime, false, false)
+	RenderScriptCams(false, true, Config.transitionTime, false, false)
 
-    SetTimeout(Config.easeTime * 2, function()
         if handCamera ~= nil and not active then
             SetCamActive(handCamera, false)
             DestroyCam(handCamera)
             handCamera = nil
         end
     end)
+	SetTimeout(Config.transitionTime * 2, function()
 
     active = false
 end
@@ -43,7 +43,6 @@ local function toggleCamera()
 
         handCamera = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
         SetCamActive(handCamera, true)
-        RenderScriptCams(true, true, Config.easeTime, false, false)
         
         if not DoesCamExist(handCamera) then
             return disableCamera()
@@ -63,6 +62,7 @@ function startThreads()
     if not active then 
         return 
     end
+	RenderScriptCams(true, true, Config.transitionTime, false, false)
 
     Citizen.CreateThread(function()
         while active do
