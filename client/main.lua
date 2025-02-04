@@ -77,8 +77,5 @@ function startThreads()
     end)
 end
 
-RegisterKeyMapping(Config.keymapping.name, Config.keymapping.description, 'keyboard', Config.keymapping.key)
-
-RegisterCommand(Config.keymapping.name, function()
-    toggleCamera()
-end)
+RegisterCommand(Config.keymapping.name, toggleCamera, false)
+RegisterKeyMapping(Config.keymapping.name, Config.keymapping.description, "keyboard", Config.keymapping.key)
