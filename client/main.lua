@@ -1,4 +1,4 @@
-local handCamera, active = nil, false
+local camHandle, camActive = 0, false
 
 local function disableCamera()
     RenderScriptCams(false, true, Config.easeTime, false, false)
