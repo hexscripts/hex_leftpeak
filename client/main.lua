@@ -1,84 +1,65 @@
-local handCamera, active = nil, false
+local camHandle, camActive = 0, false
 
 local function disableCamera()
-    RenderScriptCams(false, true, Config.easeTime, false, false)
+	RenderScriptCams(false, true, Config.transitionTime, false, false)
 
-    SetTimeout(Config.easeTime * 2, function()
-        if handCamera ~= nil and not active then
-            SetCamActive(handCamera, false)
-            DestroyCam(handCamera)
-            handCamera = nil
-        end
-    end)
+	SetTimeout(Config.transitionTime * 2, function()
+		if not camHandle or camHandle == 0 and camActive then return end
 
-    active = false
+		SetCamActive(camHandle, false)
+		DestroyCam(camHandle, false)
+		camHandle = 0
+	end)
+
+	camActive = false
 end
 
-local function setCameraLook()
-    local ped = PlayerPedId()
-    local cameraCoords = GetGameplayCamCoord()
-    local cameraRotation = GetGameplayCamRot(2)
-    local gameplayCamFov = GetGameplayCamFov()
+local function updateCameraPosition()
+	local ped = PlayerPedId()
+	local cameraCoords = GetGameplayCamCoord()
+	local cameraRotation = GetGameplayCamRot(2)
+	local gameplayCamFov = GetGameplayCamFov()
 
-    local coordsRelativeToPlayer = GetOffsetFromEntityGivenWorldCoords(ped, cameraCoords.x, cameraCoords.y, cameraCoords.z)
-    local leftShoulderCoords = GetOffsetFromEntityInWorldCoords(ped, coordsRelativeToPlayer.x, coordsRelativeToPlayer.y, coordsRelativeToPlayer.z)
+	local coordsRelativeToPlayer = GetOffsetFromEntityGivenWorldCoords(ped, cameraCoords.x, cameraCoords.y, cameraCoords.z)
 
-    SetCamCoord(handCamera, leftShoulderCoords.x, leftShoulderCoords.y, leftShoulderCoords.z)
-    SetCamRot(handCamera, cameraRotation.x, cameraRotation.y, cameraRotation.z, 2)
-    AttachCamToEntity(handCamera, ped, coordsRelativeToPlayer.x - Config.leftRange, coordsRelativeToPlayer.y, coordsRelativeToPlayer.z, true)
-    SetCamFov(handCamera, gameplayCamFov)
-
-    ShowHudComponentThisFrame(14)
+	SetCamCoord(camHandle, coordsRelativeToPlayer.x, coordsRelativeToPlayer.y, coordsRelativeToPlayer.z)
+	SetCamRot(camHandle, cameraRotation.x, cameraRotation.y, cameraRotation.z, 2)
+	AttachCamToEntity(camHandle, ped, coordsRelativeToPlayer.x - Config.leftOffset, coordsRelativeToPlayer.y, coordsRelativeToPlayer.z, true)
+	SetCamFov(camHandle, gameplayCamFov)
 end
 
 local function toggleCamera()
-    if not active then
-        if GetFollowPedCamViewMode() == 4 or not IsPlayerFreeAiming(PlayerId()) then return end
+	if camActive and camHandle then
+		SetCamAffectsAiming(camHandle, false)
+		disableCamera()
+		return
+	end
 
-        if handCamera ~= nil then
-            SetCamActive(handCamera, false)
-            DestroyCam(handCamera)
-            handCamera = nil
-        end
+	if GetFollowPedCamViewMode() == 4 or not IsPlayerFreeAiming(PlayerId()) then return end
 
-        handCamera = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
-        SetCamActive(handCamera, true)
-        RenderScriptCams(true, true, Config.easeTime, false, false)
-        
-        if not DoesCamExist(handCamera) then
-            return disableCamera()
-        end
+	if not camHandle or camHandle == 0 then
+		camHandle = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
+		if not DoesCamExist(camHandle) then return disableCamera() end
+	end
 
-        active = true
+	SetCamActive(camHandle, true)
+	SetCamAffectsAiming(camHandle, true)
+	RenderScriptCams(true, true, Config.transitionTime, false, false)
+	camActive = true
 
-        startThreads()
-        setCameraLook()
-    else
-        SetCamAffectsAiming(handCamera, true)
-        disableCamera()
-    end
+	updateCameraPosition()
+	CreateThread(function()
+		while camActive do
+			if GetFollowPedCamViewMode() == 4 or not IsPlayerFreeAiming(PlayerId()) then
+				toggleCamera()
+			else
+				updateCameraPosition()
+				ShowHudComponentThisFrame(14)
+			end
+			Wait(0)
+		end
+	end)
 end
 
-function startThreads()
-    if not active then 
-        return 
-    end
-
-    Citizen.CreateThread(function()
-        while active do
-            Citizen.Wait(0)
-    
-            if GetFollowPedCamViewMode() == 4 or not IsPlayerFreeAiming(PlayerId()) then
-                toggleCamera()
-            else
-                setCameraLook()
-            end
-        end
-    end)
-end
-
-RegisterKeyMapping(Config.keymapping.name, Config.keymapping.description, 'keyboard', Config.keymapping.key)
-
-RegisterCommand(Config.keymapping.name, function()
-    toggleCamera()
-end)
+RegisterCommand(Config.keymapping.name, toggleCamera, false)
+RegisterKeyMapping(Config.keymapping.name, Config.keymapping.description, "keyboard", Config.keymapping.key)
