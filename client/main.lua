@@ -60,7 +60,7 @@ local function toggleCamera()
 end
 
 function startThreads()
-    if active then 
+    if not active then 
         return 
     end
 
